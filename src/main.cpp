@@ -1,76 +1,31 @@
-#include <SPI.h>
-#include <DMD2.h>
-#include <fonts/SystemFont5x7.h>
-#define PANELWIDE 4
-#define PANELHIGH 4
-#define PIXELWIDE 32
-#define PIXELHIGH 16
-#define PADELPAD 10
-#define PADELLE 2
-#define PALLINE 1
-#define MAXSCORE 41
-#define DIFFICOLTA 20
+//#define DMD2PANEL
+#define SSD1306PANEL
 
-SPIDMD dmd(PANELWIDE, PANELHIGH);  // DMD controls the entire display
+#include "pong.h"
 
-typedef struct {
-  int x, y;
-  int xDir, yDir;
-  int dim;
-  int ch;
-  int score;
-} padel;
+#ifdef DMD2PANEL
+  SPIDMD dmd(PANELWIDE, PANELHIGH);  // DMD controls the entire display
+#endif
 
-typedef struct {
-  int x, y;
-  int xDir, yDir;
-  int dim;
-} pallina;
-
-struct menuConfig {
-  int player;
-  int level;
-  int play;
-};
-
-void creaPadelle(void);
-void configGame(void);
-void creaPalline(void);
-void countDown(int);
-void printMenu(void);
-void scoreRefresh(void);
-void gameOver(int);
-void padelRefresh(void);
-void ballRefresh(void);
-void creaPalline(void);
-void creaPadelle(void);
-pallina checkCollisionePadella(padel, pallina);
-padel checkConfiniPadelle(padel);
-void drawPadella(padel, DMDGraphicsMode);
-pallina checkConfiniCampo(pallina);
-void printString(int, int, String);
-void clearPannel(int);
-void drawPallina(int, int, int, DMDGraphicsMode);
-void setPixel(int, int, DMDGraphicsMode);
-
-struct menuConfig menu;
-int *menuElements[3];
-int menuElementsOld[3];
-int menuElementsLimits[3] = { 4, 10, 1 };
-
-padel pad[PADELLE];
-pallina pal[PALLINE];
-int larghezza = PANELWIDE * PIXELWIDE;
-int altezza = PANELHIGH * PIXELHIGH;
-int config = 1;
-int padelleConfig = 2;
+#ifdef SSD1306PANEL
+  Adafruit_SSD1306 display(larghezza, altezza, &Wire, OLED_RESET);
+#endif
 
 void setup() {
-  dmd.setBrightness(20);
-  dmd.selectFont(SystemFont5x7);
-  dmd.begin();
+  #ifdef DMD2PANEL
+    dmd.setBrightness(20);
+    dmd.selectFont(SystemFont5x7);
+    dmd.begin();
+  #endif
+
+  #ifdef SSD1306PANEL
+    display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  //initialize with the I2C addr 0x3C (128x64)
+    display.clearDisplay();
+    display.display();
+  #endif
+
   menu.player = 2;
-  menu.play = 0;
+  menu.play = 1;
   menu.level = 5;
   menuElements[0] = &menu.player;
   menuElements[1] = &menu.level;
@@ -79,23 +34,20 @@ void setup() {
   creaPalline();
 }
 
-unsigned long int actualTime;
-unsigned long int actualTimeConfig;
-unsigned long int oldTime = 0;
-unsigned long int oldTime2 = 0;
-unsigned long int oldTimeConfig1 = 0;
-
 void loop() {
   actualTime = millis();
   if (config) {
     printMenu();
     configGame();
   }
-  if (menu.play) {
+  else if (menu.play) {
     ballRefresh();
     padelRefresh();
     scoreRefresh();
   }
+  #ifdef SSD1306PANEL
+    display.display();
+  #endif
 }
 
 void configGame() {
@@ -103,21 +55,17 @@ void configGame() {
 
   while (!menu.play) {
     for (int i = 0; i < 3; i++) {
-      //dmd.drawString(larghezza - String(*menuElements[i]).length()*6, 2 + i * 10, String(*menuElements[i]));
       printString(larghezza - String(*menuElements[i]).length()*6, 2 + i * 10, String(*menuElements[i]));
       if (i == 1 && *menuElements[i] < 10) {
-        //dmd.drawString(larghezza - 12, 2 + configIndex * 10, " ");
         printString(larghezza - 12, 2 + configIndex * 10, " ");
       }
     }
-    //dmd.drawString(larghezza - 18, 2 + configIndex * 10, ">");
     printString(larghezza - 18, 2 + configIndex * 10, ">");
 
     *menuElements[configIndex] = map(analogRead(A0), 0, 1023, 0, menuElementsLimits[configIndex]);
     if (*menuElements[configIndex] == menuElementsOld[configIndex]) {
       actualTimeConfig = millis();
       if (actualTimeConfig - oldTimeConfig1 > 5000) {
-        //dmd.drawString(larghezza - 24, 2 + configIndex * 10, " ");
         printString(larghezza - 24, 2 + configIndex * 10, " ");
         configIndex = (1 + configIndex) % 3;
         oldTimeConfig1 = actualTimeConfig;
@@ -133,10 +81,8 @@ void configGame() {
     menuElementsOld[configIndex] = *menuElements[configIndex];
   }
   config = 0;
-  //dmd.fillScreen(0);
   clearPannel(0);
-  countDown(5);
-  //dmd.fillScreen(0);
+  //countDown(5);
   clearPannel(0);
 }
 
@@ -149,22 +95,17 @@ void countDown(int c){
 
 void printMenu() {
   String strGiocatori = "n# Player: ";
-  //dmd.drawString(6, 2, strGiocatori);
   printString(6, 2, strGiocatori);
   String strDifficolta = "Level: ";
-  //dmd.drawString(6, 12, strDifficolta);
   printString(6, 12, strDifficolta);
   String strPressToStart = "Select to Start: ";
-  //dmd.drawString(6, 22, strPressToStart);
   printString(6, 22, strPressToStart);
 }
 
 void scoreRefresh() {
   String score1 = String(pad[0].score);
   String score2 = String(pad[1].score);
-  //dmd.drawString((larghezza >> 1) - (1 + score1.length()) * 6, 2, score1);
   printString((larghezza >> 1) - (1 + score1.length()) * 6, 2, score1);
-  //dmd.drawString((larghezza >> 1) + 6, 2, score2);
   printString((larghezza >> 1) + 6, 2, score2);
   for (int i = 0; i < PADELLE; i++) {
     if (pad[i].score >= MAXSCORE) {
@@ -176,14 +117,10 @@ void scoreRefresh() {
 
 void gameOver(int winner) {
   clearPannel(0);
-  //dmd.fillScreen(0);
   String str1 = "GAME OVER";
   String str2 = "Vince il giocatore";
-  //dmd.drawString((larghezza >> 1) - 3 * str1.length(), 10, str1);
   printString((larghezza >> 1) - 3 * str1.length(), 10, str1);
-  //dmd.drawString((larghezza >> 1) - 3 * str2.length(), 30, str2);
   printString((larghezza >> 1) - 3 * str2.length(), 30, str2);
-  //dmd.drawString(64, 40, String(winner));
   printString(64, 40, String(winner));
 }
 
@@ -289,6 +226,7 @@ pallina checkConfiniCampo(pallina p) {
   return p;
 }
 
+#ifdef DMD2PANEL
 void printString(int x, int y, String str) {
   dmd.drawString(x, y, str);
 }
@@ -299,13 +237,31 @@ void clearPannel(int c) {
 
 void drawPallina(int x, int y, int d, DMDGraphicsMode mode) {
   dmd.drawCircle(x, y, d, mode);
-  /*
-  for (int i = 0; i < d; i++)
-    for (int j = 0; j < d; j++)
-      dmd.setPixel(x+i, y+j, mode);
-  */
 }
 
 void setPixel(int x, int y, DMDGraphicsMode mode) {
   dmd.setPixel(x, y, mode);
 }
+#endif
+
+#ifdef SSD1306PANEL
+void printString(int x, int y, String str) {
+  display.setTextSize(1);
+  display.fillRect(x, y, 18, 7, BLACK);
+  display.setCursor(x, y);
+  display.setTextColor(WHITE);
+  display.print(str);
+}
+
+void clearPannel(int c) {
+  display.clearDisplay();
+}
+
+void drawPallina(int x, int y, int d, int mode) {
+  display.drawCircle(x, y, d, mode); 
+}
+
+void setPixel(int x, int y, int mode) {
+  display.drawPixel(x, y, mode);
+}
+#endif
