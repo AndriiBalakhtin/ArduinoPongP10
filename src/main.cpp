@@ -58,10 +58,11 @@ void configGame() {
       printString(larghezza - String(*menuElements[i]).length()*6, 2 + i * 10, String(*menuElements[i]));
       if (i == 1 && *menuElements[i] < 10) {
         printString(larghezza - 12, 2 + configIndex * 10, " ");
+        display.display();
       }
     }
     printString(larghezza - 18, 2 + configIndex * 10, ">");
-
+    display.display();
     *menuElements[configIndex] = map(analogRead(A0), 0, 1023, 0, menuElementsLimits[configIndex]);
     if (*menuElements[configIndex] == menuElementsOld[configIndex]) {
       actualTimeConfig = millis();
@@ -69,6 +70,7 @@ void configGame() {
         printString(larghezza - 24, 2 + configIndex * 10, " ");
         configIndex = (1 + configIndex) % 3;
         oldTimeConfig1 = actualTimeConfig;
+        display.display();
       }
     } else {
       oldTimeConfig1 = millis();
@@ -79,11 +81,12 @@ void configGame() {
                                                                                                  : *menuElements[i];
     }
     menuElementsOld[configIndex] = *menuElements[configIndex];
+    
   }
   config = 0;
-  clearPannel(0);
-  //countDown(5);
-  clearPannel(0);
+  clearPanel(0);
+  countDown(5);
+  clearPanel(0);
 }
 
 void countDown(int c){
@@ -100,6 +103,7 @@ void printMenu() {
   printString(6, 12, strDifficolta);
   String strPressToStart = "Select to Start: ";
   printString(6, 22, strPressToStart);
+  display.display();
 }
 
 void scoreRefresh() {
@@ -116,7 +120,7 @@ void scoreRefresh() {
 }
 
 void gameOver(int winner) {
-  clearPannel(0);
+  clearPanel(0);
   String str1 = "GAME OVER";
   String str2 = "Vince il giocatore";
   printString((larghezza >> 1) - 3 * str1.length(), 10, str1);
@@ -231,7 +235,7 @@ void printString(int x, int y, String str) {
   dmd.drawString(x, y, str);
 }
 
-void clearPannel(int c) {
+void clearPanel(int c) {
   dmd.fillScreen(c);
 }
 
@@ -247,13 +251,13 @@ void setPixel(int x, int y, DMDGraphicsMode mode) {
 #ifdef SSD1306PANEL
 void printString(int x, int y, String str) {
   display.setTextSize(1);
-  display.fillRect(x, y, 18, 7, BLACK);
+  //display.fillRect(x, y, 18, 7, BLACK);
   display.setCursor(x, y);
   display.setTextColor(WHITE);
   display.print(str);
 }
 
-void clearPannel(int c) {
+void clearPanel(int c) {
   display.clearDisplay();
 }
 

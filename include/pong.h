@@ -64,7 +64,7 @@ pallina checkCollisionePadella(padel, pallina);
 padel checkConfiniPadelle(padel);
 pallina checkConfiniCampo(pallina);
 void printString(int, int, String);
-void clearPannel(int);
+void clearPanel(int);
 
 void drawPallina(int, int, int, DMDGraphicsMode);
 void setPixel(int, int, DMDGraphicsMode);
